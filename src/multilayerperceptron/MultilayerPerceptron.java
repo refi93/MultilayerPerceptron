@@ -115,8 +115,8 @@ public class MultilayerPerceptron {
         Matrix previousDeltaOut = null; 
         Matrix previousDeltaHidden = null; 
         
-        for (int i = 0; i < Variables.epochCount; i++) {
-            System.out.println("epocha " + i);
+        for (int ep = 0; ep < Variables.epochCount; ep++) {
+            System.out.println("epocha " + ep);
             double averageGoodPercentage = 0.0;
             
             for (int k = 0; k < Variables.validationUnitsCount; k++) {
@@ -185,7 +185,7 @@ public class MultilayerPerceptron {
             averageGoodPercentage /= Variables.validationUnitsCount;
             System.out.println(averageGoodPercentage);
             if (averageGoodPercentage > bestGoodPercentage) {
-                bestWeights = new NeuronMemento(weightsHidden, weightsOut, i);
+                bestWeights = new NeuronMemento(weightsHidden, weightsOut, ep);
                 bestGoodPercentage = averageGoodPercentage;
             }
         }
@@ -193,6 +193,8 @@ public class MultilayerPerceptron {
         // otestujeme najlepsiu neuronovu siet na ostrych datach
         weightsHidden = bestWeights.weightsHidden;
         weightsOut = bestWeights.weightsOut;
+        Matrix confusionMatrix = Helpers.numberMatrix(3, 3, 0);
+        
         int goodCount = 0;
         for (int j = 0; j < testData.numRows(); j++) {
             Matrix x = Helpers.vectorToMatrix(new ArrayList(testData.get(j)));
@@ -206,13 +208,16 @@ public class MultilayerPerceptron {
             Matrix target = Helpers.numberMatrix(classCount, 1, 0);
             int targetClass = (int)Math.round(testData.get(j).get(inputSize - 1)) - 1;
             target.get(targetClass).set(0, 1.0);
-
+            
+            double confusionMatrixValue = confusionMatrix.get(Helpers.getCategory(net)).get(Helpers.getCategory(target));
+            confusionMatrix.get(Helpers.getCategory(net)).set(Helpers.getCategory(target), confusionMatrixValue + 1);
             if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
                 goodCount++;
             }
         }
         double goodPercentage = (0.0 + goodCount) / testData.numRows();
         System.out.println("Najlepsia siet je z epochy " + bestWeights.epoch + " a ma na ostrych datach uspesnost " + goodPercentage);
+        System.out.println("Confusion matrix: " + confusionMatrix);
     }
     
 }
