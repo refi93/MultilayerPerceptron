@@ -13,12 +13,53 @@ import java.util.ArrayList;
  */
 public class Helpers {
     
+    // vyratame priemery pre jednotlive stlpce a vratime ako stlpcovy vektor
+    public static Matrix matrixAverage(Matrix data) {
+        int rows = data.numRows();
+        int cols = data.numCols();
+        
+        Matrix ret = new Matrix();
+        
+        for (int c = 0; c < cols; c++) {
+            ret.addRow();
+            double avg = 0;
+            for (int r = 0; r < rows; r++) {
+                avg += data.get(r).get(c);
+            }
+            avg /= data.numRows();
+            ret.get(c).add(avg);
+        }
+        
+        return ret;
+    }
+    
+    // vratime ako stlpcovy vektor standardne odchylky
+    public static Matrix matrixStdDev(Matrix data) {
+        Matrix dataAvg = Helpers.matrixAverage(data);
+        int rows = data.numRows();
+        int cols = data.numCols();
+        
+        Matrix ret = new Matrix();
+        
+        for (int c = 0; c < cols; c++) {
+            ret.addRow();
+            double stdDev = 0;
+            for (int r = 0; r < rows; r++) {
+                stdDev += Math.pow((data.get(r).get(c) - dataAvg.get(c).get(0)), 2);
+            }
+            stdDev = Math.sqrt(stdDev / rows);
+            ret.get(c).add(stdDev);
+        }
+        
+        return ret;
+    }
+    
     static Double letterToNumber(char c) {
-        return 0.0 + c - 'A'; 
+        return 0.0 + c - 'A' + 1; 
     }
     
     static char numberToLetter(int n) {
-        return (char) ('A' + n);
+        return (char) ('A' + n  -1);
     }
     
     // overi, ci vektory maju rovnake velkosti
@@ -238,6 +279,26 @@ public class Helpers {
             ret.addRow();
             for (int c = 0; c < cols; c++) {
                 ret.get(r).add(matrix1.get(r).get(c) * matrix2.get(r).get(c));
+            }
+        }
+        
+        return ret;
+    }
+    
+    static Matrix MatrixComponentDivision(Matrix matrix1, Matrix matrix2) {
+        int rows = matrix1.numRows();
+        int cols = matrix1.numCols();
+        if (rows != matrix2.numRows() || cols != matrix2.numCols()) {
+            System.err.println("MATICE NEMAJU ROVNAKE ROZMERY");
+            System.exit(0);
+        }
+        
+        Matrix ret = new Matrix();
+        
+        for (int r = 0; r < rows; r++) {
+            ret.addRow();
+            for (int c = 0; c < cols; c++) {
+                ret.get(r).add(matrix1.get(r).get(c) / matrix2.get(r).get(c));
             }
         }
         

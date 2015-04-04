@@ -56,16 +56,31 @@ public class MultilayerPerceptron {
     
     public static void main(String[] args) throws FileNotFoundException, IOException {
         // TODO code application logic here
-        //loadData();
+        loadData();
         
-        data = loadCsvData("test.csv");
+        Matrix trainDataAverage = Helpers.matrixAverage(data);
+        Matrix trainDataStdDev = Helpers.matrixStdDev(data);
+
+        
+        /*Matrix data2 = Helpers.transpose(data);
+        for (int r = 0; r < data2.numRows(); r++) {
+            for (int c = 0; c < data2.numCols(); c++) {
+                System.out.print(data2.get(r).get(c));
+                if (c != data2.numCols() - 1) {
+                    System.out.print(",");
+                }
+            }
+            System.out.println();
+        }*/
+        
+        //data = loadCsvData("test.csv");
         
         int dataCount = data.numRows();
         int dimensionsCount = data.get(0).size() - 1;
         int inputSize = dimensionsCount + 1;
         int classCount = 3;
         
-        int trainCount = 120;
+        int trainCount = 700;
         int testCount = dataCount - trainCount;
         // rozdelime data na trenovaci a testovaci set
         data.shuffleRows();
@@ -73,7 +88,7 @@ public class MultilayerPerceptron {
         Matrix testSet = data.subMatrix(trainCount, dataCount);
         
         double alpha = 0.1;
-        int hiddenLayersCount = 4;
+        int hiddenLayersCount = 16;
         
         Matrix weightsHidden = Helpers.randMatrix(hiddenLayersCount, inputSize);
         Matrix weightsOut = Helpers.randMatrix(classCount, hiddenLayersCount + 1);
@@ -87,6 +102,7 @@ public class MultilayerPerceptron {
             trainSet.shuffleRows();
             for (int j = 0; j < trainSet.numRows(); j++) {
                 Matrix x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
+                x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
                 x.get(x.numRows() - 1).set(0, -1.0);
                 
                 Matrix net = Helpers.matrixProduct(weightsHidden, x);
@@ -114,6 +130,7 @@ public class MultilayerPerceptron {
             int goodCount = 0;
             for (int j = 0; j < testCount; j++) {
                 Matrix x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
+                x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
                 x.get(x.numRows() - 1).set(0, -1.0);
                 
                 Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
