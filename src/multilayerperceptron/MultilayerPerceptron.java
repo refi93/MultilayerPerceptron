@@ -104,19 +104,21 @@ public class MultilayerPerceptron {
             testSets.add(testSet);
         }
         
-        double alpha = 0.1;
-        int hiddenLayersCount = 16;
-        
-        Matrix weightsHidden = Helpers.randMatrix(hiddenLayersCount, inputSize);
-        Matrix weightsOut = Helpers.randMatrix(classCount, hiddenLayersCount + 1);
+        Matrix weightsHidden = Helpers.randMatrix(Variables.hiddenLayersCount, inputSize);
+        Matrix weightsOut = Helpers.randMatrix(classCount, Variables.hiddenLayersCount + 1);
         
         ArrayList<Double> errors = new ArrayList<>();
         double bestGoodPercentage = 0.0;
         NeuronMemento bestWeights = null;
         
+        // zapamatame si predoslu zmenu vah, aby sme mohli aplikovat momentum
+        Matrix previousDeltaOut = null; 
+        Matrix previousDeltaHidden = null; 
+        
         for (int i = 0; i < Variables.epochCount; i++) {
             System.out.println("epocha " + i);
             double averageGoodPercentage = 0.0;
+            
             for (int k = 0; k < Variables.validationUnitsCount; k++) {
                 Matrix trainSet = trainSets.get(k);
                 Matrix testSet = testSets.get(k);
@@ -140,10 +142,22 @@ public class MultilayerPerceptron {
                     Matrix hUnbiased = hBiased.subMatrix(0, hBiased.numRows() - 1);
 
                     Matrix sigmaHidden = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixProduct(Helpers.transpose(weightsOutUnbiased), sigmaOut), hUnbiased), Helpers.matrixSubstract(Helpers.numberMatrix(hUnbiased.numRows(), hUnbiased.numCols(), 1), hUnbiased)) ; 
+                    
+                    Matrix deltaOut = Helpers.scalarProduct(Helpers.matrixProduct(sigmaOut, Helpers.transpose(hBiased)), Variables.alpha);
+                    weightsOut = Helpers.matrixSum(weightsOut, deltaOut);
+                    // pridame momentum
+                    if (previousDeltaOut != null) {
+                        weightsOut = Helpers.matrixSum(weightsOut, Helpers.scalarProduct(previousDeltaOut, Variables.momentum));
+                    }
+                    previousDeltaOut = deltaOut;
 
-                    weightsOut = Helpers.matrixSum(weightsOut, Helpers.scalarProduct(Helpers.matrixProduct(sigmaOut, Helpers.transpose(hBiased)), alpha));
-
-                    weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(x)), alpha));
+                    Matrix deltaHidden = Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(x)), Variables.alpha);
+                    weightsHidden = Helpers.matrixSum(weightsHidden, deltaHidden);
+                    // pridame momentum
+                    if (previousDeltaHidden != null) {
+                        weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(previousDeltaHidden, Variables.momentum));
+                    }
+                    previousDeltaHidden = deltaHidden;
                 }
 
                 // testovanie
