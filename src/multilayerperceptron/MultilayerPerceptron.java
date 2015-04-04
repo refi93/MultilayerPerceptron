@@ -209,8 +209,8 @@ public class MultilayerPerceptron {
             int targetClass = (int)Math.round(testData.get(j).get(inputSize - 1)) - 1;
             target.get(targetClass).set(0, 1.0);
             
-            double confusionMatrixValue = confusionMatrix.get(Helpers.getCategory(net)).get(Helpers.getCategory(target));
-            confusionMatrix.get(Helpers.getCategory(net)).set(Helpers.getCategory(target), confusionMatrixValue + 1);
+            double confusionMatrixValue = confusionMatrix.get(Helpers.getCategory(target)).get(Helpers.getCategory(net));
+            confusionMatrix.get(Helpers.getCategory(target)).set(Helpers.getCategory(net), confusionMatrixValue + 1);
             if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
                 goodCount++;
             }
