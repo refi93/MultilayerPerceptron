@@ -22,19 +22,19 @@ public class MultilayerPerceptron {
      * @param args the command line arguments
      */
     
-    static Matrix data;
-    
-    public static void loadData() throws FileNotFoundException{
-        Scanner in = new Scanner(new FileReader("2d.trn.dat"));
-        data = new Matrix();
+    public static Matrix loadData(String fileName) throws FileNotFoundException{
+        Scanner in = new Scanner(new FileReader(fileName));
+        Matrix ret = new Matrix();
         while(in.hasNext()){
-            data.addRow();
+            ret.addRow();
             for (int i = 0; i < 2; i++){
                 Double input = Double.parseDouble(in.next());
-                data.get(data.numRows() - 1).add(input);
+                ret.get(ret.numRows() - 1).add(input);
             }
-            data.get(data.numRows() - 1).add(Helpers.letterToNumber(in.next().charAt(0)));
+            ret.get(ret.numRows() - 1).add(Helpers.letterToNumber(in.next().charAt(0)));
         }
+        
+        return ret;
     }
     
     public static Matrix loadCsvData(String csvFile) throws FileNotFoundException, IOException{
@@ -56,10 +56,11 @@ public class MultilayerPerceptron {
     
     public static void main(String[] args) throws FileNotFoundException, IOException {
         // TODO code application logic here
-        loadData();
+        Matrix trainData = loadData("2d.trn.dat");
+        Matrix testData = loadData("2d.tst.dat");
         
-        Matrix trainDataAverage = Helpers.matrixAverage(data);
-        Matrix trainDataStdDev = Helpers.matrixStdDev(data);
+        Matrix trainDataAverage = Helpers.matrixAverage(trainData);
+        Matrix trainDataStdDev = Helpers.matrixStdDev(trainData);
 
         
         /*Matrix data2 = Helpers.transpose(data);
@@ -75,17 +76,33 @@ public class MultilayerPerceptron {
         
         //data = loadCsvData("test.csv");
         
-        int dataCount = data.numRows();
-        int dimensionsCount = data.get(0).size() - 1;
+        int trainDataCount = trainData.numRows();
+        int dimensionsCount = trainData.get(0).size() - 1;
         int inputSize = dimensionsCount + 1;
-        int classCount = 3;
+        int classCount = Variables.classCount;
         
-        int trainCount = 700;
-        int testCount = dataCount - trainCount;
+        int trainUnitSize = trainDataCount / Variables.validationUnitsCount;
         // rozdelime data na trenovaci a testovaci set
-        data.shuffleRows();
-        Matrix trainSet = data.subMatrix(0, trainCount);
-        Matrix testSet = data.subMatrix(trainCount, dataCount);
+        trainData.shuffleRows();
+        ArrayList<Matrix> trainSets = new ArrayList<>();
+        ArrayList<Matrix> testSets = new ArrayList<>();
+        ArrayList<Matrix> trainUnits = new ArrayList<>();
+        
+        for (int i = 0; i < Variables.validationUnitsCount; i++) {
+            trainUnits.add(trainData.subMatrix(i * trainUnitSize, (i + 1) * trainUnitSize));
+        }
+        
+        for (int i = 0; i < Variables.validationUnitsCount; i++) {
+            Matrix trainSet = trainUnits.get(i);
+            Matrix testSet = new Matrix();
+            for (int j = 0; j < Variables.validationUnitsCount; j++) {
+                if (i != j) {
+                    testSet.appendMatrix(trainUnits.get(i));
+                }
+            }
+            trainSets.add(trainSet);
+            testSets.add(testSet);
+        }
         
         double alpha = 0.1;
         int hiddenLayersCount = 16;
@@ -93,62 +110,95 @@ public class MultilayerPerceptron {
         Matrix weightsHidden = Helpers.randMatrix(hiddenLayersCount, inputSize);
         Matrix weightsOut = Helpers.randMatrix(classCount, hiddenLayersCount + 1);
         
-        int epochCount = 1000;
         ArrayList<Double> errors = new ArrayList<>();
+        double bestGoodPercentage = 0.0;
+        NeuronMemento bestWeights = null;
         
-        for (int i = 0; i < epochCount; i++) {
-            
-            // trenovanie
-            trainSet.shuffleRows();
-            for (int j = 0; j < trainSet.numRows(); j++) {
-                Matrix x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
-                x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
-                x.get(x.numRows() - 1).set(0, -1.0);
-                
-                Matrix net = Helpers.matrixProduct(weightsHidden, x);
-                Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(net)); // pridame bias k matici
-                Matrix y = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
-                
-                // urcime target
-                Matrix target = Helpers.numberMatrix(classCount, 1, 0);
-                int targetClass = (int)Math.round(trainSet.get(j).get(inputSize - 1)) - 1;
-                target.get(targetClass).set(0, 1.0);
-                
-                Matrix sigmaOut = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixSubstract(target, y), y), Helpers.matrixSubstract(Helpers.numberMatrix(y.numRows(), y.numCols(), 1.0), y));
-                
-                Matrix weightsOutUnbiased = Helpers.removeLastColumn(weightsOut);
-                Matrix hUnbiased = hBiased.subMatrix(0, hBiased.numRows() - 1);
-                
-                Matrix sigmaHidden = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixProduct(Helpers.transpose(weightsOutUnbiased), sigmaOut), hUnbiased), Helpers.matrixSubstract(Helpers.numberMatrix(hUnbiased.numRows(), hUnbiased.numCols(), 1), hUnbiased)) ; 
-                
-                weightsOut = Helpers.matrixSum(weightsOut, Helpers.scalarProduct(Helpers.matrixProduct(sigmaOut, Helpers.transpose(hBiased)), alpha));
-                
-                weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(x)), alpha));
-            }
-            
-            // testovanie
-            int goodCount = 0;
-            for (int j = 0; j < testCount; j++) {
-                Matrix x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
-                x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
-                x.get(x.numRows() - 1).set(0, -1.0);
-                
-                Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
-                Matrix net = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
-                
-                // urcime target
-                Matrix target = Helpers.numberMatrix(classCount, 1, 0);
-                int targetClass = (int)Math.round(testSet.get(j).get(inputSize - 1)) - 1;
-                target.get(targetClass).set(0, 1.0);
-                
-                if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
-                    goodCount++;
+        for (int i = 0; i < Variables.epochCount; i++) {
+            System.out.println("epocha " + i);
+            double averageGoodPercentage = 0.0;
+            for (int k = 0; k < Variables.validationUnitsCount; k++) {
+                Matrix trainSet = trainSets.get(k);
+                Matrix testSet = testSets.get(k);
+                for (int j = 0; j < trainSet.numRows(); j++) {
+                    Matrix x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
+                    x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
+                    x.get(x.numRows() - 1).set(0, -1.0);
+
+                    Matrix net = Helpers.matrixProduct(weightsHidden, x);
+                    Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(net)); // pridame bias k matici
+                    Matrix y = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
+
+                    // urcime target
+                    Matrix target = Helpers.numberMatrix(classCount, 1, 0);
+                    int targetClass = (int)Math.round(trainSet.get(j).get(inputSize - 1)) - 1;
+                    target.get(targetClass).set(0, 1.0);
+
+                    Matrix sigmaOut = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixSubstract(target, y), y), Helpers.matrixSubstract(Helpers.numberMatrix(y.numRows(), y.numCols(), 1.0), y));
+
+                    Matrix weightsOutUnbiased = Helpers.removeLastColumn(weightsOut);
+                    Matrix hUnbiased = hBiased.subMatrix(0, hBiased.numRows() - 1);
+
+                    Matrix sigmaHidden = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixProduct(Helpers.transpose(weightsOutUnbiased), sigmaOut), hUnbiased), Helpers.matrixSubstract(Helpers.numberMatrix(hUnbiased.numRows(), hUnbiased.numCols(), 1), hUnbiased)) ; 
+
+                    weightsOut = Helpers.matrixSum(weightsOut, Helpers.scalarProduct(Helpers.matrixProduct(sigmaOut, Helpers.transpose(hBiased)), alpha));
+
+                    weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(x)), alpha));
                 }
+
+                // testovanie
+                int goodCount = 0;
+                for (int j = 0; j < testSet.numRows(); j++) {
+                    Matrix x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
+                    x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
+                    x.get(x.numRows() - 1).set(0, -1.0);
+
+                    Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
+                    Matrix net = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
+
+                    // urcime target
+                    Matrix target = Helpers.numberMatrix(classCount, 1, 0);
+                    int targetClass = (int)Math.round(testSet.get(j).get(inputSize - 1)) - 1;
+                    target.get(targetClass).set(0, 1.0);
+
+                    if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
+                        goodCount++;
+                    }
+                }
+                double goodPercentage = (0.0 + goodCount) / testSet.numRows();
+                averageGoodPercentage += goodPercentage;
             }
-            double goodPercentage = (0.0 + goodCount) / testCount;
-            System.out.println(goodPercentage);
+            averageGoodPercentage /= Variables.validationUnitsCount;
+            System.out.println(averageGoodPercentage);
+            if (averageGoodPercentage > bestGoodPercentage) {
+                bestWeights = new NeuronMemento(weightsHidden, weightsOut, i);
+                bestGoodPercentage = averageGoodPercentage;
+            }
         }
         
+        // otestujeme najlepsiu neuronovu siet na ostrych datach
+        weightsHidden = bestWeights.weightsHidden;
+        weightsOut = bestWeights.weightsOut;
+        int goodCount = 0;
+        for (int j = 0; j < testData.numRows(); j++) {
+            Matrix x = Helpers.vectorToMatrix(new ArrayList(testData.get(j)));
+            x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev); // normalizejeme data
+            x.get(x.numRows() - 1).set(0, -1.0);
+
+            Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
+            Matrix net = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
+
+            // urcime target
+            Matrix target = Helpers.numberMatrix(classCount, 1, 0);
+            int targetClass = (int)Math.round(testData.get(j).get(inputSize - 1)) - 1;
+            target.get(targetClass).set(0, 1.0);
+
+            if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
+                goodCount++;
+            }
+        }
+        double goodPercentage = (0.0 + goodCount) / testData.numRows();
+        System.out.println("Najlepsia siet je z epochy " + bestWeights.epoch + " a ma na ostrych datach uspesnost " + goodPercentage);
     }
     
 }

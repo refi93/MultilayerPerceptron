@@ -7,7 +7,6 @@ package multilayerperceptron;
 
 import java.util.ArrayList;
 import java.util.List;
-import static multilayerperceptron.MultilayerPerceptron.data;
 
 /**
  *
@@ -55,5 +54,9 @@ public class Matrix {
     @Override
     public String toString() {
         return representation.toString();
+    }
+    
+    public void appendMatrix(Matrix m) {
+        this.representation.addAll(m.representation);
     }
 }
