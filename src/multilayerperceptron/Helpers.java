@@ -51,13 +51,13 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > scalarProduct(ArrayList<ArrayList<Double> > matrix, double scalar){
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
-        int rows = matrix.size();
-        int cols = matrix.get(0).size();
+    static Matrix scalarProduct(Matrix matrix, double scalar){
+        Matrix ret = new Matrix();
+        int rows = matrix.numRows();
+        int cols = matrix.numCols();
         
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols; c++) {
                 ret.get(r).add(matrix.get(r).get(c) * scalar);
             }
@@ -82,14 +82,14 @@ public class Helpers {
         return sigmoid(y) * (1 - sigmoid(y));
     }
     
-    static ArrayList<ArrayList<Double> > transpose(ArrayList<ArrayList<Double> > matrix){
-        int rows = matrix.size();
-        int cols = matrix.get(0).size();
+    static Matrix transpose(Matrix matrix){
+        int rows = matrix.numRows();
+        int cols = matrix.numCols();
         
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+        Matrix ret = new Matrix();
         
         for (int c = 0; c < cols; c++){
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int r = 0; r < rows; r++){
                 ret.get(c).add(matrix.get(r).get(c));
             }
@@ -98,12 +98,12 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > matrixProduct(ArrayList<ArrayList<Double> > matrix1, ArrayList<ArrayList<Double> > matrix2){
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
-        int matrix1Rows = matrix1.size();
-        int matrix1Cols = matrix1.get(0).size();
-        int matrix2Rows = matrix2.size();
-        int matrix2Cols = matrix2.get(0).size();
+    static Matrix matrixProduct(Matrix matrix1, Matrix matrix2){
+        Matrix ret = new Matrix();
+        int matrix1Rows = matrix1.numRows();
+        int matrix1Cols = matrix1.numCols();
+        int matrix2Rows = matrix2.numRows();
+        int matrix2Cols = matrix2.numCols();
         
         if (matrix1Cols != matrix2Rows){
             System.err.println(matrix1);
@@ -113,7 +113,7 @@ public class Helpers {
         }
         
         for (int r = 0; r < matrix1Rows; r++){
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < matrix2Cols; c++){
                 Double result = 0.0;
                 for (int i = 0; i < matrix1Cols; i++){
@@ -126,10 +126,10 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > randMatrix (int rows, int cols) {
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+    static Matrix randMatrix (int rows, int cols) {
+        Matrix ret = new Matrix();
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols; c++) {
                 ret.get(r).add(Math.random());
             }
@@ -138,20 +138,20 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > vectorToMatrix (ArrayList<Double> vector) {
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+    static Matrix vectorToMatrix (ArrayList<Double> vector) {
+        Matrix ret = new Matrix();
         for (int i = 0; i < vector.size(); i++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             ret.get(i).add(vector.get(i));
         }
         
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > matrixSigmoid(ArrayList<ArrayList<Double> > netMatrix) {
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
-        for (int r = 0; r < netMatrix.size(); r++) {
-            ret.add(new ArrayList<Double>());
+    static Matrix matrixSigmoid(Matrix netMatrix) {
+        Matrix ret = new Matrix();
+        for (int r = 0; r < netMatrix.numRows(); r++) {
+            ret.addRow();
             for (int c = 0; c < netMatrix.get(r).size(); c++) {
                 ret.get(r).add(Helpers.sigmoid(netMatrix.get(r).get(c)));
             }
@@ -159,10 +159,10 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > matrixDeepCopy(ArrayList<ArrayList<Double> > matrix) {
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
-        for (int r = 0; r < matrix.size(); r++) {
-            ret.add(new ArrayList<Double>());
+    static Matrix matrixDeepCopy(Matrix matrix) {
+        Matrix ret = new Matrix();
+        for (int r = 0; r < matrix.numRows(); r++) {
+            ret.addRow();
             for (int c = 0; c < matrix.get(r).size(); c++) {
                 ret.get(r).add(matrix.get(r).get(c));
             }
@@ -171,21 +171,21 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > appendBias(ArrayList<ArrayList<Double> > matrix) {
-        ArrayList<ArrayList<Double> > ret = Helpers.matrixDeepCopy(matrix);
-        int cols = ret.get(0).size();
-        ret.add(new ArrayList<Double>());
+    static Matrix appendBias(Matrix matrix) {
+        Matrix ret = Helpers.matrixDeepCopy(matrix);
+        int cols = ret.numCols();
+        ret.addRow();
         for (int c = 0; c < cols; c++) {
-           ret.get(ret.size() - 1).add(-1.0);
+           ret.get(ret.numRows() - 1).add(-1.0);
         }
         
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > numberMatrix(int rows, int cols, double number) {
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+    static Matrix numberMatrix(int rows, int cols, double number) {
+        Matrix ret = new Matrix();
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols; c++) {
                 ret.get(r).add(number);
             }
@@ -194,13 +194,13 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > matrixSum(ArrayList<ArrayList<Double> > matrix1, ArrayList<ArrayList<Double> > matrix2){
-        int rows = matrix1.size();
-        int cols = matrix1.get(0).size();
+    static Matrix matrixSum(Matrix matrix1, Matrix matrix2){
+        int rows = matrix1.numRows();
+        int cols = matrix1.numCols();
         
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+        Matrix ret = new Matrix();
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols; c++) {
                 ret.get(r).add(matrix1.get(r).get(c) + matrix2.get(r).get(c));
             }
@@ -209,13 +209,13 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > matrixSubstract(ArrayList<ArrayList<Double> > matrix1, ArrayList<ArrayList<Double> > matrix2){
-        int rows = matrix1.size();
-        int cols = matrix1.get(0).size();
+    static Matrix matrixSubstract(Matrix matrix1, Matrix matrix2){
+        int rows = matrix1.numRows();
+        int cols = matrix1.numCols();
         
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+        Matrix ret = new Matrix();
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols; c++) {
                 ret.get(r).add(matrix1.get(r).get(c) - matrix2.get(r).get(c));
             }
@@ -224,29 +224,33 @@ public class Helpers {
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > matrixComponentProduct(ArrayList<ArrayList<Double> > matrix1, ArrayList<ArrayList<Double> > matrix2) {
-        int rows = matrix1.size();
-        int cols = matrix1.get(0).size();
+    static Matrix matrixComponentProduct(Matrix matrix1, Matrix matrix2) {
+        int rows = matrix1.numRows();
+        int cols = matrix1.numCols();
+        if (rows != matrix2.numRows() || cols != matrix2.numCols()) {
+            System.err.println("MATICE NEMAJU ROVNAKE ROZMERY");
+            System.exit(0);
+        }
         
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+        Matrix ret = new Matrix();
         
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols; c++) {
-                ret.get(r).add(matrix1.get(r).get(c) * matrix1.get(r).get(c));
+                ret.get(r).add(matrix1.get(r).get(c) * matrix2.get(r).get(c));
             }
         }
         
         return ret;
     }
     
-    static ArrayList<ArrayList<Double> > removeLastColumn(ArrayList<ArrayList<Double> > matrix) {
-        int rows = matrix.size();
-        int cols = matrix.get(0).size();
-        ArrayList<ArrayList<Double> > ret = new ArrayList<>();
+    static Matrix removeLastColumn(Matrix matrix) {
+        int rows = matrix.numRows();
+        int cols = matrix.numCols();
+        Matrix ret = new Matrix();
         
         for (int r = 0; r < rows; r++) {
-            ret.add(new ArrayList<Double>());
+            ret.addRow();
             for (int c = 0; c < cols - 1; c++) {
                 ret.get(r).add(matrix.get(r).get(c));
             }
@@ -255,8 +259,9 @@ public class Helpers {
         return ret;
     }
     
-    static int getCategory(ArrayList<ArrayList<Double> > net) {
-        int rows = net.size();
+    static int getCategory(Matrix net) {
+        //System.out.println(net);
+        int rows = net.numRows();
         double max = 0; int maxPos = 0;
         for (int r = 0; r < rows; r++) {
             double cur = net.get(r).get(0);

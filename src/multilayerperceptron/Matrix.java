@@ -6,23 +6,54 @@
 package multilayerperceptron;
 
 import java.util.ArrayList;
+import java.util.List;
+import static multilayerperceptron.MultilayerPerceptron.data;
 
 /**
  *
  * @author raf
  */
 public class Matrix {
-    ArrayList<ArrayList<Double> > representation;
+    private ArrayList<ArrayList<Double> > representation;
     
-    public Matrix(){
+    public Matrix() {
         representation = new ArrayList< >();
     }
     
-    public Double get(int r, int c) {
-        return representation.get(r).get(c);
+    public Matrix(List l) {
+        this.representation = new ArrayList<>(l);
     }
     
-    public void set(int r, int c, Double val) {
-        representation.get(r).set(c, val);
+    public void addRow() {
+        representation.add(new ArrayList<Double>());
+    }
+    
+    public ArrayList<Double> get(int r) {
+        return representation.get(r);
+    }
+    
+    public void addRow(ArrayList<Double> row) {
+        representation.add(row);
+    }
+    
+    public int numRows() {
+        return representation.size();
+    }
+    
+    public int numCols() {
+        return representation.get(0).size();
+    }
+    
+    public Matrix subMatrix(int rowFrom, int rowTo) {
+        return new Matrix(representation.subList(rowFrom, rowTo));
+    }
+    
+    public void shuffleRows() {
+        java.util.Collections.shuffle(representation);
+    }
+
+    @Override
+    public String toString() {
+        return representation.toString();
     }
 }

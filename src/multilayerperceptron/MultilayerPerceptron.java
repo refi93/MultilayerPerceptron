@@ -5,10 +5,11 @@
  */
 package multilayerperceptron;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Scanner;
 
 /**
@@ -21,25 +22,45 @@ public class MultilayerPerceptron {
      * @param args the command line arguments
      */
     
-    static ArrayList<ArrayList<Double> > data;
+    static Matrix data;
     
     public static void loadData() throws FileNotFoundException{
         Scanner in = new Scanner(new FileReader("2d.trn.dat"));
-        data = new ArrayList<>();
+        data = new Matrix();
         while(in.hasNext()){
-            data.add(new ArrayList<Double>());
+            data.addRow();
             for (int i = 0; i < 2; i++){
                 Double input = Double.parseDouble(in.next());
-                data.get(data.size() - 1).add(input);
+                data.get(data.numRows() - 1).add(input);
             }
-            data.get(data.size() - 1).add(Helpers.letterToNumber(in.next().charAt(0)));
+            data.get(data.numRows() - 1).add(Helpers.letterToNumber(in.next().charAt(0)));
         }
     }
     
-    public static void main(String[] args) throws FileNotFoundException {
+    public static Matrix loadCsvData(String csvFile) throws FileNotFoundException, IOException{
+        BufferedReader br = new BufferedReader(new FileReader(csvFile));
+        String line;
+        Matrix ret = new Matrix();
+        
+        while ((line = br.readLine()) != null) {
+            ArrayList<Double> pom = new ArrayList<>();
+            String[] inputs = line.split(",");
+            for(String s : inputs){
+                pom.add(Double.parseDouble(s)); 
+            }
+            ret.addRow(pom);
+        }
+        ret = Helpers.transpose(ret);
+        return ret;
+    }
+    
+    public static void main(String[] args) throws FileNotFoundException, IOException {
         // TODO code application logic here
-        loadData();
-        int dataCount = data.size();
+        //loadData();
+        
+        data = loadCsvData("test.csv");
+        
+        int dataCount = data.numRows();
         int dimensionsCount = data.get(0).size() - 1;
         int inputSize = dimensionsCount + 1;
         int classCount = 3;
@@ -47,66 +68,67 @@ public class MultilayerPerceptron {
         int trainCount = 120;
         int testCount = dataCount - trainCount;
         // rozdelime data na trenovaci a testovaci set
-        ArrayList<ArrayList<Double> > trainSet = new ArrayList(data.subList(0, trainCount));
-        ArrayList<ArrayList<Double> > testSet = new ArrayList(data.subList(trainCount, dataCount));
+        data.shuffleRows();
+        Matrix trainSet = data.subMatrix(0, trainCount);
+        Matrix testSet = data.subMatrix(trainCount, dataCount);
         
         double alpha = 0.1;
         int hiddenLayersCount = 4;
         
-        ArrayList<ArrayList<Double> > weightsHidden = Helpers.randMatrix(hiddenLayersCount, inputSize);
-        ArrayList<ArrayList<Double> > weightsOut = Helpers.randMatrix(classCount, hiddenLayersCount + 1);
+        Matrix weightsHidden = Helpers.randMatrix(hiddenLayersCount, inputSize);
+        Matrix weightsOut = Helpers.randMatrix(classCount, hiddenLayersCount + 1);
         
-        int epochCount = 200;
+        int epochCount = 1000;
         ArrayList<Double> errors = new ArrayList<>();
         
         for (int i = 0; i < epochCount; i++) {
             
             // trenovanie
-            java.util.Collections.shuffle(trainSet);
-            for (int j = 0; j < trainSet.size(); j++) {
-                ArrayList<ArrayList<Double> > x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
-                x.get(x.size() - 1).set(0, -1.0);
-             
-                ArrayList<ArrayList<Double> > net = Helpers.matrixProduct(weightsHidden, x);
-                ArrayList<ArrayList<Double> > hBiased = Helpers.appendBias(Helpers.matrixSigmoid(net)); // pridame bias k matici
-                ArrayList<ArrayList<Double> > y = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
-       
+            trainSet.shuffleRows();
+            for (int j = 0; j < trainSet.numRows(); j++) {
+                Matrix x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
+                x.get(x.numRows() - 1).set(0, -1.0);
+                
+                Matrix net = Helpers.matrixProduct(weightsHidden, x);
+                Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(net)); // pridame bias k matici
+                Matrix y = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
+                
                 // urcime target
-                ArrayList<ArrayList<Double> > target = Helpers.numberMatrix(classCount, 1, 0);
-                int targetClass = (int)Math.round(trainSet.get(j).get(inputSize - 1));
+                Matrix target = Helpers.numberMatrix(classCount, 1, 0);
+                int targetClass = (int)Math.round(trainSet.get(j).get(inputSize - 1)) - 1;
                 target.get(targetClass).set(0, 1.0);
                 
-                ArrayList<ArrayList<Double> > sigmaOut = Helpers.matrixProduct(Helpers.matrixProduct(Helpers.matrixSubstract(target, y), Helpers.transpose(y)), Helpers.matrixSubstract(y, Helpers.numberMatrix(y.size(), y.get(0).size(), 1.0)));
+                Matrix sigmaOut = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixSubstract(target, y), y), Helpers.matrixSubstract(Helpers.numberMatrix(y.numRows(), y.numCols(), 1.0), y));
                 
-                ArrayList<ArrayList<Double> > weightsOutUnbiased = Helpers.removeLastColumn(weightsOut);
-                ArrayList<ArrayList<Double> > hUnbiased = new ArrayList<>(hBiased.subList(0, hBiased.size() - 1));
+                Matrix weightsOutUnbiased = Helpers.removeLastColumn(weightsOut);
+                Matrix hUnbiased = hBiased.subMatrix(0, hBiased.numRows() - 1);
                 
-                ArrayList<ArrayList<Double> > sigmaHidden = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixProduct(Helpers.transpose(weightsOutUnbiased), sigmaOut), hUnbiased), Helpers.matrixSubstract(Helpers.numberMatrix(hUnbiased.size(), hUnbiased.get(0).size(), 1), hUnbiased)) ; 
+                Matrix sigmaHidden = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixProduct(Helpers.transpose(weightsOutUnbiased), sigmaOut), hUnbiased), Helpers.matrixSubstract(Helpers.numberMatrix(hUnbiased.numRows(), hUnbiased.numCols(), 1), hUnbiased)) ; 
                 
                 weightsOut = Helpers.matrixSum(weightsOut, Helpers.scalarProduct(Helpers.matrixProduct(sigmaOut, Helpers.transpose(hBiased)), alpha));
                 
-                weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(net)), alpha));
+                weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(x)), alpha));
             }
             
             // testovanie
-            int errorCount = 0;
+            int goodCount = 0;
             for (int j = 0; j < testCount; j++) {
-                ArrayList<ArrayList<Double> > x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
-                x.get(x.size() - 1).set(0, -1.0);
+                Matrix x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
+                x.get(x.numRows() - 1).set(0, -1.0);
                 
-                ArrayList<ArrayList<Double> > hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
-                ArrayList<ArrayList<Double> > net = Helpers.matrixProduct(weightsOut, hBiased);
+                Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
+                Matrix net = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
                 
                 // urcime target
-                ArrayList<ArrayList<Double> > target = Helpers.numberMatrix(classCount, 1, 0);
-                int targetClass = (int)Math.round(testSet.get(j).get(inputSize - 1));
+                Matrix target = Helpers.numberMatrix(classCount, 1, 0);
+                int targetClass = (int)Math.round(testSet.get(j).get(inputSize - 1)) - 1;
                 target.get(targetClass).set(0, 1.0);
-                                
-                if (Helpers.getCategory(net) != Helpers.getCategory(target)) {
-                    errorCount++;
+                
+                if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
+                    goodCount++;
                 }
             }
-            double goodPercentage = (0.0 + errorCount) / testCount;
+            double goodPercentage = (0.0 + goodCount) / testCount;
             System.out.println(goodPercentage);
         }
         
