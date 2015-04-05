@@ -59,8 +59,8 @@ public class MultilayerPerceptron {
         Matrix trainData = loadData("2d.trn.dat");
         Matrix testData = loadData("2d.tst.dat");
         
-        Matrix trainDataAverage = Helpers.matrixAverage(trainData);
-        Matrix trainDataStdDev = Helpers.matrixStdDev(trainData);
+        Variables.trainDataAverage = Helpers.matrixAverage(trainData);
+        Variables.trainDataStdDev = Helpers.matrixStdDev(trainData);
 
         
         /*Matrix data2 = Helpers.transpose(data);
@@ -104,120 +104,31 @@ public class MultilayerPerceptron {
             testSets.add(testSet);
         }
         
-        Matrix weightsHidden = Helpers.randMatrix(Variables.hiddenLayersCount, inputSize);
-        Matrix weightsOut = Helpers.randMatrix(classCount, Variables.hiddenLayersCount + 1);
+        double bestAlpha = 0;
+        double bestMomentum = 0; 
+        int bestHiddenLayerSize = 0;
         
-        ArrayList<Double> errors = new ArrayList<>();
-        double bestGoodPercentage = 0.0;
-        NeuronMemento bestWeights = null;
-        
-        // zapamatame si predoslu zmenu vah, aby sme mohli aplikovat momentum
-        Matrix previousDeltaOut = null; 
-        Matrix previousDeltaHidden = null; 
-        
-        for (int ep = 0; ep < Variables.epochCount; ep++) {
-            System.out.println("epocha " + ep);
-            double averageGoodPercentage = 0.0;
-            
-            for (int k = 0; k < Variables.validationUnitsCount; k++) {
-                Matrix trainSet = trainSets.get(k);
-                Matrix testSet = testSets.get(k);
-                for (int j = 0; j < trainSet.numRows(); j++) {
-                    Matrix x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
-                    x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
-                    x.get(x.numRows() - 1).set(0, -1.0);
-
-                    Matrix net = Helpers.matrixProduct(weightsHidden, x);
-                    Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(net)); // pridame bias k matici
-                    Matrix y = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
-
-                    // urcime target
-                    Matrix target = Helpers.numberMatrix(classCount, 1, 0);
-                    int targetClass = (int)Math.round(trainSet.get(j).get(inputSize - 1)) - 1;
-                    target.get(targetClass).set(0, 1.0);
-
-                    Matrix sigmaOut = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixSubstract(target, y), y), Helpers.matrixSubstract(Helpers.numberMatrix(y.numRows(), y.numCols(), 1.0), y));
-
-                    Matrix weightsOutUnbiased = Helpers.removeLastColumn(weightsOut);
-                    Matrix hUnbiased = hBiased.subMatrix(0, hBiased.numRows() - 1);
-
-                    Matrix sigmaHidden = Helpers.matrixComponentProduct(Helpers.matrixComponentProduct(Helpers.matrixProduct(Helpers.transpose(weightsOutUnbiased), sigmaOut), hUnbiased), Helpers.matrixSubstract(Helpers.numberMatrix(hUnbiased.numRows(), hUnbiased.numCols(), 1), hUnbiased)) ; 
-                    
-                    Matrix deltaOut = Helpers.scalarProduct(Helpers.matrixProduct(sigmaOut, Helpers.transpose(hBiased)), Variables.alpha);
-                    weightsOut = Helpers.matrixSum(weightsOut, deltaOut);
-                    // pridame momentum
-                    if (previousDeltaOut != null) {
-                        weightsOut = Helpers.matrixSum(weightsOut, Helpers.scalarProduct(previousDeltaOut, Variables.momentum));
-                    }
-                    previousDeltaOut = deltaOut;
-
-                    Matrix deltaHidden = Helpers.scalarProduct(Helpers.matrixProduct(sigmaHidden, Helpers.transpose(x)), Variables.alpha);
-                    weightsHidden = Helpers.matrixSum(weightsHidden, deltaHidden);
-                    // pridame momentum
-                    if (previousDeltaHidden != null) {
-                        weightsHidden = Helpers.matrixSum(weightsHidden, Helpers.scalarProduct(previousDeltaHidden, Variables.momentum));
-                    }
-                    previousDeltaHidden = deltaHidden;
-                }
-
-                // testovanie
-                int goodCount = 0;
-                for (int j = 0; j < testSet.numRows(); j++) {
-                    Matrix x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
-                    x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev);
-                    x.get(x.numRows() - 1).set(0, -1.0);
-
-                    Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
-                    Matrix net = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
-
-                    // urcime target
-                    Matrix target = Helpers.numberMatrix(classCount, 1, 0);
-                    int targetClass = (int)Math.round(testSet.get(j).get(inputSize - 1)) - 1;
-                    target.get(targetClass).set(0, 1.0);
-
-                    if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
-                        goodCount++;
+        double bestCv = 1.0;
+        for (double alpha = 0.05; alpha < 0.31; alpha += 0.05) {
+            for (double momentum = 0; momentum < 0.51; momentum += 0.1) {
+                for (int hiddenLayerSize = 16; hiddenLayerSize < 25; hiddenLayerSize += 8) {
+                    MLPModel mlp = new MLPModel(alpha, momentum, hiddenLayerSize, 500);
+                    double cv = mlp.crossValidate(trainSets, testSets);
+                    System.out.println(alpha + " " + momentum + " " + hiddenLayerSize + " " + cv);
+                    if (cv < bestCv) {
+                        bestCv = cv;
+                        bestAlpha = alpha;
+                        bestMomentum = momentum;
+                        bestHiddenLayerSize = hiddenLayerSize;
                     }
                 }
-                double goodPercentage = (0.0 + goodCount) / testSet.numRows();
-                averageGoodPercentage += goodPercentage;
-            }
-            averageGoodPercentage /= Variables.validationUnitsCount;
-            System.out.println(averageGoodPercentage);
-            if (averageGoodPercentage > bestGoodPercentage) {
-                bestWeights = new NeuronMemento(weightsHidden, weightsOut, ep);
-                bestGoodPercentage = averageGoodPercentage;
             }
         }
-        
-        // otestujeme najlepsiu neuronovu siet na ostrych datach
-        weightsHidden = bestWeights.weightsHidden;
-        weightsOut = bestWeights.weightsOut;
-        Matrix confusionMatrix = Helpers.numberMatrix(3, 3, 0);
-        
-        int goodCount = 0;
-        for (int j = 0; j < testData.numRows(); j++) {
-            Matrix x = Helpers.vectorToMatrix(new ArrayList(testData.get(j)));
-            x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, trainDataAverage), trainDataStdDev); // normalizejeme data
-            x.get(x.numRows() - 1).set(0, -1.0);
 
-            Matrix hBiased = Helpers.appendBias(Helpers.matrixSigmoid(Helpers.matrixProduct(weightsHidden, x)));
-            Matrix net = Helpers.matrixSigmoid(Helpers.matrixProduct(weightsOut, hBiased));
-
-            // urcime target
-            Matrix target = Helpers.numberMatrix(classCount, 1, 0);
-            int targetClass = (int)Math.round(testData.get(j).get(inputSize - 1)) - 1;
-            target.get(targetClass).set(0, 1.0);
-            
-            double confusionMatrixValue = confusionMatrix.get(Helpers.getCategory(target)).get(Helpers.getCategory(net));
-            confusionMatrix.get(Helpers.getCategory(target)).set(Helpers.getCategory(net), confusionMatrixValue + 1);
-            if (Helpers.getCategory(net) == Helpers.getCategory(target)) {
-                goodCount++;
-            }
-        }
-        double goodPercentage = (0.0 + goodCount) / testData.numRows();
-        System.out.println("Najlepsia siet je z epochy " + bestWeights.epoch + " a ma na ostrych datach uspesnost " + goodPercentage);
-        System.out.println("Confusion matrix: " + confusionMatrix);
+        MLPModel bestModel = new MLPModel(bestAlpha, bestMomentum, bestHiddenLayerSize, 1000);
+        NeuronMemento nm = bestModel.train(trainData, trainData);
+        double testError = bestModel.test(nm.weightsHidden, nm.weightsOut, testData);
+        System.out.println("najlepsi model: " + bestModel.alpha + " " + bestModel.momentum + " " + bestModel.hiddenLayerSize + " error: " + testError);
     }
     
 }
