@@ -93,11 +93,11 @@ public class MultilayerPerceptron {
         }
         
         for (int i = 0; i < Variables.validationUnitsCount; i++) {
-            Matrix trainSet = trainUnits.get(i);
-            Matrix testSet = new Matrix();
+            Matrix testSet = trainUnits.get(i);
+            Matrix trainSet = new Matrix();
             for (int j = 0; j < Variables.validationUnitsCount; j++) {
                 if (i != j) {
-                    testSet.appendMatrix(trainUnits.get(i));
+                    trainSet.appendMatrix(trainUnits.get(j));
                 }
             }
             trainSets.add(trainSet);
@@ -112,9 +112,8 @@ public class MultilayerPerceptron {
         for (double alpha = 0.05; alpha < 0.31; alpha += 0.05) {
             for (double momentum = 0; momentum < 0.51; momentum += 0.1) {
                 for (int hiddenLayerSize = 16; hiddenLayerSize < 25; hiddenLayerSize += 8) {
-                    MLPModel mlp = new MLPModel(alpha, momentum, hiddenLayerSize, 500);
+                    MLPModel mlp = new MLPModel(alpha, momentum, hiddenLayerSize, 1000);
                     double cv = mlp.crossValidate(trainSets, testSets);
-                    System.out.println(alpha + " " + momentum + " " + hiddenLayerSize + " " + cv);
                     if (cv < bestCv) {
                         bestCv = cv;
                         bestAlpha = alpha;

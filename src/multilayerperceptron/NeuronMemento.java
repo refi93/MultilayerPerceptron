@@ -11,11 +11,12 @@ package multilayerperceptron;
  */
 public class NeuronMemento {
     Matrix weightsHidden, weightsOut;
-    double validationError;
+    double validationError, estimationError;
     
-    public NeuronMemento(Matrix weightsHidden, Matrix weightsOut, double validationError) {
+    public NeuronMemento(Matrix weightsHidden, Matrix weightsOut, double validationError, double estimationError) {
         this.weightsHidden = Helpers.matrixDeepCopy(weightsHidden);
         this.weightsOut = Helpers.matrixDeepCopy(weightsOut);
         this.validationError = validationError;
+        this.estimationError = estimationError;
     }
 }

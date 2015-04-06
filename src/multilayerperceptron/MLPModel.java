@@ -26,10 +26,15 @@ public class MLPModel {
     public double crossValidate(ArrayList<Matrix> trainSets, ArrayList<Matrix> testSets) {
         
         double cv = 0.0; // cross validation coefficient
+        double averageEstimationError = 0.0;
         for (int k = 0; k < trainSets.size(); k++) {
-            cv += this.train(trainSets.get(k), testSets.get(k)).validationError;
+            NeuronMemento nm = this.train(trainSets.get(k), testSets.get(k));
+            cv += nm.validationError;
+            averageEstimationError += nm.estimationError;
         }
         cv /= trainSets.size();
+        averageEstimationError /= trainSets.size();
+        System.out.println(alpha + ", " + momentum + ", " + hiddenLayerSize + ", " + cv + ", " + averageEstimationError);
         return cv;
     }
     
@@ -38,6 +43,8 @@ public class MLPModel {
         int dimensionsCount = trainSet.numCols() - 1;
         int inputSize = dimensionsCount + 1;
         int classCount = Variables.classCount;
+        ArrayList<Double> estimationErrors = new ArrayList<>();
+        ArrayList<Double> validationErrors = new ArrayList<>();
         
         Matrix weightsHidden = Helpers.randMatrix(Variables.hiddenLayersCount, inputSize);
         Matrix weightsOut = Helpers.randMatrix(classCount, Variables.hiddenLayersCount + 1);
@@ -90,13 +97,16 @@ public class MLPModel {
                 }
                 previousDeltaHidden = deltaHidden;
             }
-
             // otestujeme na validacnej mnozine
             double validationError = this.test(weightsHidden, weightsOut, testSet);
-  
+            // otestujeme na estimacnej mnozine
+            double estimationError = this.test(weightsHidden, weightsOut, trainSet);
+            //validationErrors.add(validationError);
+            estimationErrors.add(estimationError);
+            
             if (validationError < bestValidationError) {
                 bestValidationError = validationError;
-                bestWeights = new NeuronMemento(weightsHidden, weightsOut, validationError);
+                bestWeights = new NeuronMemento(weightsHidden, weightsOut, validationError, estimationError);
             }    
         }
         return bestWeights;
@@ -123,8 +133,10 @@ public class MLPModel {
                 errorCount++;
             }
         }
-        double validationError = (0.0 + errorCount) / testSet.numRows(); // validacna chyba
+        //System.out.println(errorCount + " " + testSet.numRows());
+        //System.out.println(testSet);
+        double errorPercentage = (0.0 + errorCount) / testSet.numRows(); // validacna chyba
         
-        return validationError;
+        return errorPercentage;
     }
 }
