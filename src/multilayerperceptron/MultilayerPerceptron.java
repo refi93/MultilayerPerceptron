@@ -10,6 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Scanner;
 
 /**
@@ -107,12 +108,13 @@ public class MultilayerPerceptron {
         double bestAlpha = 0;
         double bestMomentum = 0; 
         int bestHiddenLayerSize = 0;
-        
-        double bestCv = 1.0;
-        for (double alpha = 0.05; alpha < 0.31; alpha += 0.05) {
+        double bestCv = 1.0; // priemerna chyba na validacnej mnozine
+
+        // hladanie optimalneho modelu pomocou k-cross validacie
+        for (double alpha = 0; alpha < 0.31; alpha += 0.05) {
             for (double momentum = 0; momentum < 0.51; momentum += 0.1) {
                 for (int hiddenLayerSize = 16; hiddenLayerSize < 25; hiddenLayerSize += 8) {
-                    MLPModel mlp = new MLPModel(alpha, momentum, hiddenLayerSize, 1000);
+                    MLPModel mlp = new MLPModel(alpha, momentum, hiddenLayerSize, 1000, false);
                     double cv = mlp.crossValidate(trainSets, testSets);
                     if (cv < bestCv) {
                         bestCv = cv;
@@ -123,11 +125,28 @@ public class MultilayerPerceptron {
                 }
             }
         }
+        Matrix testData2 = Helpers.transpose(testData);
+        for (int i = 0; i < testData2.numRows(); i++) {
+            System.out.print('[');
+            for (int j = 0; j < testData2.numCols(); j++) {
+                System.out.print(testData2.get(i).get(j) + ",");
+            }
+            System.out.println(']');
+        }
+        
+        //bestAlpha = 0.15; bestMomentum = 0.4; bestHiddenLayerSize = 24;
+        // vyskusame najlepsi model
+        MLPModel bestModel = new MLPModel(bestAlpha, bestMomentum, bestHiddenLayerSize, 1000, true);
+        // natrenujeme a otestujeme ho na nahodnom testovacom a validacnom sete - 2 disj. podmnoziny 2d.trn.dat
+        // spomedzi 1000 iteracii vyberieme vahy s najmensou validacnou chybou
+        Random r = new Random();
+        int setId = r.nextInt() % 8;
+        // v nm si zapamatame najlepsie ziskane vahy
+        NeuronMemento nm = bestModel.train(trainSets.get(setId), testSets.get(setId));
+        double testError = bestModel.test(nm.weightsHidden, nm.weightsOut, testData, true);
+        double trainError = bestModel.test(nm.weightsHidden, nm.weightsOut, trainData, false);
 
-        MLPModel bestModel = new MLPModel(bestAlpha, bestMomentum, bestHiddenLayerSize, 1000);
-        NeuronMemento nm = bestModel.train(trainData, trainData);
-        double testError = bestModel.test(nm.weightsHidden, nm.weightsOut, testData);
-        System.out.println("najlepsi model: " + bestModel.alpha + " " + bestModel.momentum + " " + bestModel.hiddenLayerSize + " error: " + testError);
+        System.out.println("najlepsi model: " + bestModel.alpha + " " + bestModel.momentum + " " + bestModel.hiddenLayerSize + " test error: " + testError + " train error: " + trainError);
     }
     
 }

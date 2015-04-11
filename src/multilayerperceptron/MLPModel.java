@@ -15,12 +15,14 @@ public class MLPModel {
     double alpha, momentum;
     int hiddenLayerSize;
     int epochCount;
+    boolean recordErrors;
     
-    public MLPModel (double alpha, double momentum, int hiddenLayerSize, int epochCount) {
+    public MLPModel (double alpha, double momentum, int hiddenLayerSize, int epochCount, boolean recordErrors) {
         this.alpha = alpha;
         this.momentum = momentum;
         this.hiddenLayerSize = hiddenLayerSize;
         this.epochCount = epochCount;
+        this.recordErrors = recordErrors; // ci sa maju zaznamenavat estimacna a validacna chyba
     }
     
     public double crossValidate(ArrayList<Matrix> trainSets, ArrayList<Matrix> testSets) {
@@ -34,10 +36,11 @@ public class MLPModel {
         }
         cv /= trainSets.size();
         averageEstimationError /= trainSets.size();
-        System.out.println(alpha + ", " + momentum + ", " + hiddenLayerSize + ", " + cv + ", " + averageEstimationError);
+        System.out.println(alpha + ", " + momentum + ", " + hiddenLayerSize + ", " + (cv * 100) + ", " + (averageEstimationError * 100));
         return cv;
     }
     
+    // natrenujeme na trainSet, otestujeme na testSet, chyba na testSet nema vplyv na proces trenovania, vyuziva sa to iba pri k-cross validacii
     public NeuronMemento train(Matrix trainSet, Matrix testSet) {
         int trainDataCount = trainSet.numRows();
         int dimensionsCount = trainSet.numCols() - 1;
@@ -57,8 +60,7 @@ public class MLPModel {
         NeuronMemento bestWeights = null;
         
         for (int ep = 0; ep < epochCount; ep++) {
-            //System.out.println("epocha " + ep);
-            
+            //System.out.println(ep);
             // natrenujeme na estimacnej mnozine
             for (int j = 0; j < trainSet.numRows(); j++) {
                 Matrix x = Helpers.vectorToMatrix(new ArrayList(trainSet.get(j)));
@@ -98,24 +100,36 @@ public class MLPModel {
                 previousDeltaHidden = deltaHidden;
             }
             // otestujeme na validacnej mnozine
-            double validationError = this.test(weightsHidden, weightsOut, testSet);
-            // otestujeme na estimacnej mnozine
-            double estimationError = this.test(weightsHidden, weightsOut, trainSet);
-            //validationErrors.add(validationError);
-            estimationErrors.add(estimationError);
+            double validationError = this.test(weightsHidden, weightsOut, testSet, false);
+            if (this.recordErrors) {
+                validationErrors.add(validationError);
+                estimationErrors.add(this.test(weightsHidden, weightsOut, trainSet, false));
+            }
             
             if (validationError < bestValidationError) {
                 bestValidationError = validationError;
+                // otestujeme na estimacnej mnozine
+                double estimationError = 0;
+                if (!this.recordErrors) {
+                    estimationError = this.test(weightsHidden, weightsOut, trainSet, false);
+                }
                 bestWeights = new NeuronMemento(weightsHidden, weightsOut, validationError, estimationError);
             }    
+        }
+        if (this.recordErrors) {
+            System.out.println(estimationErrors);
+            System.out.println(validationErrors);
         }
         return bestWeights;
     }
     
-    public double test(Matrix weightsHidden, Matrix weightsOut, Matrix testSet) {
+    // vrati to validacnu chybu na test mnozine
+    public double test(Matrix weightsHidden, Matrix weightsOut, Matrix testSet, boolean display) {
         // testovanie
         int inputSize = testSet.numCols();
         int errorCount = 0;
+        if (display) System.out.print('[');
+        int[][] confusionMatrix = new int[3][3];
         for (int j = 0; j < testSet.numRows(); j++) {
             Matrix x = Helpers.vectorToMatrix(new ArrayList(testSet.get(j)));
             x = Helpers.MatrixComponentDivision(Helpers.matrixSubstract(x, Variables.trainDataAverage), Variables.trainDataStdDev);
@@ -128,9 +142,23 @@ public class MLPModel {
             Matrix target = Helpers.numberMatrix(Variables.classCount, 1, 0);
             int targetClass = (int)Math.round(testSet.get(j).get(inputSize - 1)) - 1;
             target.get(targetClass).set(0, 1.0);
-
             if (Helpers.getCategory(net) != Helpers.getCategory(target)) {
                 errorCount++;
+                if (display) System.out.print("1,");
+                confusionMatrix[(int)(Helpers.getCategory(net))][(int)Helpers.getCategory(target)]++;
+            }
+            else{
+                confusionMatrix[(int)(Helpers.getCategory(net))][(int)Helpers.getCategory(target)]++;
+                if (display) System.out.print("0,");
+            }
+        }if (display) {
+            System.out.println("]");
+        
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    System.out.print(confusionMatrix[i][j] + ", ");
+                }
+                System.out.println();
             }
         }
         //System.out.println(errorCount + " " + testSet.numRows());

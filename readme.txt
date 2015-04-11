@@ -1,0 +1,1 @@
+v zlozke src je zdrojovy kod samotneho projektu, v zlozke matlab su matlab programy pouzite na vykreslenie vysledkov

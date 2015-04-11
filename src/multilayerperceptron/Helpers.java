@@ -11,6 +11,8 @@ import java.util.ArrayList;
  *
  * @author raf
  */
+
+// pomocne funkcie, predovsetkym na jednoduchsiu pracu s maticami
 public class Helpers {
     
     // vyratame priemery pre jednotlive stlpce a vratime ako stlpcovy vektor
